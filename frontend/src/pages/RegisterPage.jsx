@@ -65,17 +65,36 @@ export default function RegisterPage() {
   };
 
   const captureFace = async () => {
-    if (!livenessVerified) {
-      setToastType("error");
-      setMessage("Can hoan thanh liveness truoc khi capture face.");
-      return;
-    }
-    const detection = await detectSingleFaceDescriptor(videoRef.current);
-    setFaceDescriptor(Array.from(detection.descriptor));
-    setToastType("success");
-    setMessage("Da capture Face ID.");
-  };
-
+      if (!livenessVerified) {
+        setToastType("error");
+        setMessage("Cần hoàn thành liveness trước khi capture face.");
+        return;
+      }
+    
+      try {
+        const detection = await detectSingleFaceDescriptor(videoRef.current);
+        
+        if (!detection) {
+          throw new Error("No face detected");
+        }
+    
+        setFaceDescriptor(Array.from(detection.descriptor));
+        setToastType("success");
+        setMessage("Đã capture Face ID.");
+        
+      } catch (error) {
+        console.error("Capture error:", error);
+    
+        setToastType("error");
+        
+        if (error.message.includes("No face detected") || error.message.includes("not found")) {
+          setMessage("Vui lòng đưa khuôn mặt bạn vào vòng tròn và giữ yên.");
+        } else {
+          setMessage("Có lỗi xảy ra khi nhận diện, vui lòng thử lại.");
+        }
+      }
+    };
+    
   const submit = async (e) => {
     e.preventDefault();
     const normalizedPhone = form.phone.trim();
