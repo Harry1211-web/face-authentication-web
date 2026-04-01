@@ -23,7 +23,6 @@ export default function MainPage() {
     })
       .then((data) => {
         setProfile(data);
-        setUser(data);
         console.log(data)
       })
       .catch((error) => {
@@ -66,13 +65,13 @@ export default function MainPage() {
       <h1>Trang Chinh</h1>
       <div className="card">
         <p>
-          <b>Ho ten:</b> {profile?.fullName || user?.fullName}
+          <b>Ho ten:</b> {profile.fullName}
         </p>
         <p>
-          <b>Email:</b> {profile?.email || user?.email}
+          <b>Email:</b> {profile.email}
         </p>
         <p>
-          <b>SDT:</b> {profile?.phone || user?.phone || "-"}
+          <b>SDT:</b> {profile.phone }
         </p>
       </div>
 
