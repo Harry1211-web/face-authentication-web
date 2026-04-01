@@ -23,6 +23,7 @@ export default function LoginPage() {
   const verifyPassword = async (e) => {
     e.preventDefault();
     try {
+      setIsSending(true)
       const result = await apiRequest("/api/auth/login/password", {
         method: "POST",
         body: JSON.stringify({ email, password }),
@@ -64,7 +65,6 @@ export default function LoginPage() {
       setToastType("success");
       setMessage("Da xac thuc nguoi that. Dang tien hanh dang nhap khuon mat...");
 
-      setIsSending(true);
       const loginResult = await apiRequest("/api/auth/login/face", {
         method: "POST",
         body: JSON.stringify({
@@ -75,7 +75,6 @@ export default function LoginPage() {
         }),
       });
 
-      setIsSending(false)
       stream.getTracks().forEach((t) => t.stop());
       login(loginResult.token);
       setToastType("success");
