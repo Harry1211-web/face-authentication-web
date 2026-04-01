@@ -22,7 +22,7 @@ export default function LoginPage() {
   const verifyPassword = async (e) => {
     e.preventDefault();
     try {
-      const result = await apiRequest("/auth/login/password", {
+      const result = await apiRequest("/api/auth/login/password", {
         method: "POST",
         body: JSON.stringify({ email, password }),
       });
