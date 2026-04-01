@@ -16,10 +16,8 @@ export default function MainPage() {
   const [newPassword, setNewPassword] = useState("");
   const [message, setMessage] = useState("");
   const [toastType, setToastType] = useState("info");
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    setLoading(true)
     apiRequest("/api/users/me", {
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -30,7 +28,7 @@ export default function MainPage() {
       .catch((error) => {
         setToastType("error");
         setMessage(error.message);
-      }).finally(() => setLoading(false));
+      });
   }, [token]);
 
   const changePassword = async (e) => {
@@ -62,22 +60,26 @@ export default function MainPage() {
     navigate("/login");
   };
 
-  if (loading) {
-    return <div className="loading-screen">Đang tải thông tin người dùng ...</div>;
-  }
   return (
     <div className="page">
       <h1>Trang Chinh</h1>
       <div className="card">
-        <p>
-          <b>Ho ten:</b> {profile.fullName}
-        </p>
-        <p>
-          <b>Email:</b> {profile.email}
-        </p>
-        <p>
-          <b>SDT:</b> {profile.phone }
-        </p>
+        
+        {profile ? (
+          <>
+          <p>
+            <b>Ho ten:</b> {profile.fullName}
+          </p>
+          <p>
+            <b>Email:</b> {profile.email}
+          </p>
+          <p>
+            <b>SDT:</b> {profile.phone }
+          </p>
+          </>
+        ) : (
+          <p>Đang tải danh tính...</p>
+        )}
       </div>
 
       <form onSubmit={changePassword} className="card">
