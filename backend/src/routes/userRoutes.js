@@ -24,10 +24,9 @@ router.get("/me", authMiddleware, async (req, res) => {
       fullName: user.full_name,
       email: user.email,
       phone: user.phone,
-      createdAt: user.created_at,
+      createdAt: user.created_at
     });
   } catch (error) {
-    console.log(error.message)
     return res.status(500).json({ message: error.message || "Server error" });
   }
 });

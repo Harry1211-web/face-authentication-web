@@ -13,7 +13,7 @@ export function AuthProvider({ children }) {
   const value = useMemo(
     () => ({
       token,
-      login: (nextToken, nextUser) => {
+      login: (nextToken) => {
         setToken(nextToken);
       },
       logout: () => {
