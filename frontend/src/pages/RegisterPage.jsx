@@ -25,6 +25,8 @@ export default function RegisterPage() {
   const [isChecking, setIsChecking] = useState(false);
   const [livenessVerified, setLivenessVerified] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+
 
   const startCamera = async () => {
     setIsChecking(true);
@@ -176,12 +178,16 @@ export default function RegisterPage() {
       return;
     }
 
+    setIsSending(true);
+
     await apiRequest("/api/auth/register", {
       method: "POST",
       body: JSON.stringify({ ...form, phone: normalizedPhone, faceDescriptor }),
     });
     setToastType("success");
     setMessage("Dang ky thanh cong. Chuyen sang trang login...");
+
+    setIsSending(false);
     setTimeout(() => navigate("/login"), 800);
   };
 
@@ -232,7 +238,7 @@ export default function RegisterPage() {
             {isCapturing ? "Đang quét khuôn mặt..." : "Bắt đầu quét Face ID"}
           </button>
         </div>
-        <button type="submit">Dang ky</button>
+        <button type="submit" disabled={isSending}>{isSending ? "Đang xử lý thông tin đăng ký..." : "Đăng ký"}</button>
       </form>
       <Toast message={message} type={toastType} onClose={() => setMessage("")} />
       <p>
