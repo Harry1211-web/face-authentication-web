@@ -74,7 +74,7 @@ export default function LoginPage() {
       });
 
       stream.getTracks().forEach((t) => t.stop());
-      login(loginResult.token, loginResult.user);
+      login(loginResult.token);
       navigate("/main");
     } catch (error) {
       setToastType("error");
