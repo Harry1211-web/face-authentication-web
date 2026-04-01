@@ -22,7 +22,7 @@ export default function MainPage() {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((data) => {
-        data = data.json();
+        JSON.parse(data);
         setProfile(data);
         console.log(profile)
       })
