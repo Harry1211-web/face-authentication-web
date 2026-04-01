@@ -68,7 +68,7 @@ export default function MainPage() {
   return (
     <div className="page">
       <h1>Trang Chinh</h1>
-      {/* <div className="card">
+      <div className="card">
         <p>
           <b>Ho ten:</b> {profile.fullName}
         </p>
@@ -78,7 +78,7 @@ export default function MainPage() {
         <p>
           <b>SDT:</b> {profile.phone }
         </p>
-      </div> */}
+      </div>
 
       <form onSubmit={changePassword} className="card">
         <h3>Change Password</h3>
