@@ -28,7 +28,7 @@ export default function MainPage() {
       .catch((error) => {
         setToastType("error");
         setMessage(error.message);
-      }).finally(()=> console.log(profile.fullname));
+      }).finally(()=> console.log(profile.fullName));
   }, [token]);
 
   const changePassword = async (e) => {
