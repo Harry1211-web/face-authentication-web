@@ -18,7 +18,7 @@ export default function MainPage() {
   const [toastType, setToastType] = useState("info");
 
   useEffect(() => {
-    apiRequest("/users/me", {
+    apiRequest("/api/users/me", {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((data) => {
@@ -40,7 +40,7 @@ export default function MainPage() {
     }
 
     try {
-      await apiRequest("/users/me/password", {
+      await apiRequest("/api/users/me/password", {
         method: "PATCH",
         headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify({ oldPassword, newPassword }),
