@@ -9,7 +9,7 @@ import {
 } from "../utils/passwordPolicy";
 
 export default function MainPage() {
-  const { token, user, logout, setUser } = useAuth();
+  const { token, logout, setUser } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
   const [oldPassword, setOldPassword] = useState("");
@@ -27,8 +27,8 @@ export default function MainPage() {
         console.log(data)
       })
       .catch((error) => {
-        setToastType("error");
-        setMessage(error.message);
+        // setToastType("error");
+        // setMessage(error.message);
       });
   }, [token]);
 
