@@ -22,14 +22,13 @@ export default function MainPage() {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((data) => {
-        JSON.parse(data);
         setProfile(data);
-        console.log(profile)
+        console.log(data); 
       })
       .catch((error) => {
         setToastType("error");
         setMessage(error.message);
-      });
+      }).finally(()=> console.log(profile.fullname));
   }, [token]);
 
   const changePassword = async (e) => {
