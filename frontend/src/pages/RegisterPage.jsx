@@ -24,6 +24,7 @@ export default function RegisterPage() {
   const [toastType, setToastType] = useState("info");
   const [isChecking, setIsChecking] = useState(false);
   const [livenessVerified, setLivenessVerified] = useState(false);
+  const [isCapturing, setIsCapturing] = useState(false);
 
   const startCamera = async () => {
     setIsChecking(true);
@@ -64,36 +65,75 @@ export default function RegisterPage() {
     }
   };
 
-  const captureFace = async () => {
-      if (!livenessVerified) {
+  // const captureFace = async () => {
+  //     if (!livenessVerified) {
+  //       setToastType("error");
+  //       setMessage("Cần hoàn thành liveness trước khi capture face.");
+  //       return;
+  //     }
+    
+  //     try {
+  //       const detection = await detectSingleFaceDescriptor(videoRef.current);
+        
+  //       if (!detection) {
+  //         throw new Error("No face detected");
+  //       }
+    
+  //       setFaceDescriptor(Array.from(detection.descriptor));
+  //       setToastType("success");
+  //       setMessage("Đã capture Face ID.");
+        
+  //     } catch (error) {
+  //       console.error("Capture error:", error);
+    
+  //       setToastType("error");
+        
+  //       if (error.message.includes("No face detected") || error.message.includes("not found")) {
+  //         setMessage("Vui lòng đưa khuôn mặt bạn vào vòng tròn và giữ yên.");
+  //       } else {
+  //         setMessage("Có lỗi xảy ra khi nhận diện, vui lòng thử lại.");
+  //       }
+  //     }
+  //   };
+
+
+  const startAutoCapture = async () => {
+    if (isCapturing || !livenessVerified) return;
+    
+    setIsCapturing(true);
+    let attempts = 0;
+    const MAX_ATTEMPTS = 15; // Giới hạn 15 giây thử lại (15 lần x 1s)
+
+    const attemptCapture = async () => {
+      // Nếu quá số lần cho phép hoặc người dùng đã hủy
+      if (attempts >= MAX_ATTEMPTS) {
         setToastType("error");
-        setMessage("Cần hoàn thành liveness trước khi capture face.");
+        setMessage("Quá thời gian quét. Vui lòng kiểm tra ánh sáng và thử lại.");
+        setIsCapturing(false);
         return;
       }
-    
+
       try {
+        attempts++;
         const detection = await detectSingleFaceDescriptor(videoRef.current);
         
-        if (!detection) {
+        if (detection) {
+          setFaceDescriptor(Array.from(detection.descriptor));
+          setToastType("success");
+          setMessage("Đã capture Face ID thành công!");
+          setIsCapturing(false); // Dừng lại khi thành công
+        } else {
           throw new Error("No face detected");
         }
-    
-        setFaceDescriptor(Array.from(detection.descriptor));
-        setToastType("success");
-        setMessage("Đã capture Face ID.");
-        
       } catch (error) {
-        console.error("Capture error:", error);
-    
-        setToastType("error");
-        
-        if (error.message.includes("No face detected") || error.message.includes("not found")) {
-          setMessage("Vui lòng đưa khuôn mặt bạn vào vòng tròn và giữ yên.");
-        } else {
-          setMessage("Có lỗi xảy ra khi nhận diện, vui lòng thử lại.");
-        }
+        // Giữ thông báo nhẹ nhàng trong quá trình thử lại
+        setMessage(`Đang quét... (${attempts}/${MAX_ATTEMPTS})`);
+        setTimeout(attemptCapture, 1000); // Đệ quy sau 1 giây
       }
     };
+
+    attemptCapture();
+  };
 
   const submit = async (e) => {
     e.preventDefault();
@@ -164,8 +204,12 @@ export default function RegisterPage() {
           <button type="button" onClick={startCamera}>
             {isChecking ? "Dang kiem tra..." : "Bat camera + Liveness"}
           </button>
-          <button type="button" onClick={captureFace} disabled={!livenessVerified}>
-            Capture Face ID
+          <button 
+            type="button" 
+            onClick={startAutoCapture} 
+            disabled={!livenessVerified || isCapturing}
+          >
+            {isCapturing ? "Đang quét khuôn mặt..." : "Bắt đầu quét Face ID"}
           </button>
         </div>
         <button type="submit">Dang ky</button>
