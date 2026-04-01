@@ -55,7 +55,7 @@ copy env.example .env
 npm run dev
 ```
 
-Backend chạy tại: `http://localhost:5000/api`
+Backend local chạy tại: `http://localhost:5000/api`
 
 ### Bước 3: Chạy frontend
 
@@ -65,7 +65,7 @@ npm install
 npm run dev
 ```
 
-Frontend chạy tại: `http://localhost:5173`
+Frontend local chạy tại: `http://localhost:5173`
 
 Lưu ý: Frontend có thể cấu hình API bằng biến môi trường `VITE_API_BASE_URL`.
 

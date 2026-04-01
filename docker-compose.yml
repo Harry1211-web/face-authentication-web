@@ -4,11 +4,10 @@ services:
     environment:
       PORT: 5000
       JWT_SECRET: change_me_in_production
-      FRONTEND_ORIGIN: http://localhost
-      DATABASE_URL: postgresql://user:password@host/db?sslmode=require
+      FRONTEND_ORIGIN: face-authentication-web-gr11.vercel.app
+      DATABASE_URL: postgresql://neondb_owner:npg_Bn7KL4OvWRXp@ep-cold-base-ae456let-pooler.c-2.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require
     ports:
       - "5000:5000"
-
   frontend:
     build: ./frontend
     ports:
