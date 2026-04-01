@@ -104,6 +104,23 @@ export default function RegisterPage() {
     let attempts = 0;
     const MAX_ATTEMPTS = 15; // Giới hạn 15 giây thử lại (15 lần x 1s)
 
+  const stopCamera = () => {
+    if (streamRef.current) {
+      // Lấy tất cả các track (video, audio) từ stream
+      streamRef.current.getTracks().forEach((track) => {
+        track.stop(); // Dừng track lại
+        track.enabled = false; // Vô hiệu hóa track
+      });
+      
+      // Gỡ bỏ nguồn của thẻ video để màn hình đen đi
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+      
+      streamRef.current = null; // Reset biến stream
+    }
+  };
+
     const attemptCapture = async () => {
       // Nếu quá số lần cho phép hoặc người dùng đã hủy
       if (attempts >= MAX_ATTEMPTS) {
@@ -122,6 +139,7 @@ export default function RegisterPage() {
           setToastType("success");
           setMessage("Đã capture Face ID thành công!");
           setIsCapturing(false); // Dừng lại khi thành công
+          stopCamera();
         } else {
           throw new Error("No face detected");
         }
@@ -134,6 +152,8 @@ export default function RegisterPage() {
 
     attemptCapture();
   };
+
+  
 
   const submit = async (e) => {
     e.preventDefault();
