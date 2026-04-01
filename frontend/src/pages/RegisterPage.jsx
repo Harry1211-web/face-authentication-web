@@ -156,7 +156,7 @@ export default function RegisterPage() {
       return;
     }
 
-    await apiRequest("api/auth/register", {
+    await apiRequest("/api/auth/register", {
       method: "POST",
       body: JSON.stringify({ ...form, phone: normalizedPhone, faceDescriptor }),
     });
