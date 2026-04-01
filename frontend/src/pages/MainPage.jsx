@@ -30,7 +30,7 @@ export default function MainPage() {
         setToastType("error");
         setMessage(error.message);
       });
-  }, [setUser, token]);
+  }, [token]);
 
   const changePassword = async (e) => {
     e.preventDefault();
