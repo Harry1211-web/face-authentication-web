@@ -94,7 +94,7 @@ export default function RegisterPage() {
         }
       }
     };
-    
+
   const submit = async (e) => {
     e.preventDefault();
     const normalizedPhone = form.phone.trim();
@@ -116,7 +116,7 @@ export default function RegisterPage() {
       return;
     }
 
-    await apiRequest("/auth/register", {
+    await apiRequest("/register", {
       method: "POST",
       body: JSON.stringify({ ...form, phone: normalizedPhone, faceDescriptor }),
     });

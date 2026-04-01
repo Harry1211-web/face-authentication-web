@@ -95,8 +95,8 @@ video {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 140px;
-  height: 170px;
+  width: 130px;
+  height: 160px;
   transform: translate(-50%, -50%);
   border: 2px dashed #54a8ff;
   border-radius: 100px;
