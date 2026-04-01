@@ -22,8 +22,9 @@ export default function MainPage() {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((data) => {
+        data = data.json();
         setProfile(data);
-        console.log(data)
+        console.log(profile)
       })
       .catch((error) => {
         setToastType("error");
