@@ -116,7 +116,7 @@ export default function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             required
           />
-          <button type="submit">{isSending ? "Đang xem xét thông tin đăng nhập ..." : "Đăng nhập"}</button>
+          <button type="submit" disabled={isSending}>{isSending ? "Đang xem xét thông tin đăng nhập ..." : "Đăng nhập"}</button>
         </form>
       )}
 
