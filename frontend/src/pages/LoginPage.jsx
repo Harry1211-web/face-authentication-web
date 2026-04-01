@@ -18,6 +18,7 @@ export default function LoginPage() {
   const [toastType, setToastType] = useState("info");
   const [isChecking, setIsChecking] = useState(false);
   const autoStartedRef = useRef(false);
+  const [isSending, setIsSending] = useState(false);
 
   const verifyPassword = async (e) => {
     e.preventDefault();
@@ -63,6 +64,7 @@ export default function LoginPage() {
       setToastType("success");
       setMessage("Da xac thuc nguoi that. Dang tien hanh dang nhap khuon mat...");
 
+      setIsSending(true);
       const loginResult = await apiRequest("/api/auth/login/face", {
         method: "POST",
         body: JSON.stringify({
@@ -73,8 +75,11 @@ export default function LoginPage() {
         }),
       });
 
+      setIsSending(false)
       stream.getTracks().forEach((t) => t.stop());
       login(loginResult.token);
+      setToastType("success");
+      setMessage("Đăng nhập thành công.");
       navigate("/main");
     } catch (error) {
       setToastType("error");
@@ -111,7 +116,7 @@ export default function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             required
           />
-          <button type="submit">Xac thuc mat khau</button>
+          <button type="submit">{isSending ? "Đang xem xét thông tin đăng nhập ..." : "Đăng nhập"}</button>
         </form>
       )}
 

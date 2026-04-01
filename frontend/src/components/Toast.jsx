@@ -6,19 +6,20 @@ export default function Toast({
   onClose,
   durationMs = 3500,
 }) {
-  if (!message) return null;
-
   useEffect(() => {
-    if (!durationMs) return undefined;
+    if (!message || !durationMs) return undefined;
     const t = setTimeout(() => onClose?.(), durationMs);
     return () => clearTimeout(t);
   }, [durationMs, message, onClose]);
 
+  if (!message) return null;
+
   return (
     <div className={`toast toast-${type}`}>
-      <span>{message}</span>
+      <span key={message}>{message}</span>
+      
       <button type="button" className="toast-close" onClick={onClose}>
-        x
+        ×
       </button>
     </div>
   );
