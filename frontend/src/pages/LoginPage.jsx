@@ -63,7 +63,7 @@ export default function LoginPage() {
       setToastType("success");
       setMessage("Da xac thuc nguoi that. Dang tien hanh dang nhap khuon mat...");
 
-      const loginResult = await apiRequest("/auth/login/face", {
+      const loginResult = await apiRequest("/api/auth/login/face", {
         method: "POST",
         body: JSON.stringify({
           userId: passwordResult.userId,
