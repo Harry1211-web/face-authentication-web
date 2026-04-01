@@ -27,6 +27,7 @@ router.get("/me", authMiddleware, async (req, res) => {
       createdAt: user.created_at,
     });
   } catch (error) {
+    console.log(error.message)
     return res.status(500).json({ message: error.message || "Server error" });
   }
 });

@@ -26,8 +26,8 @@ export default function MainPage() {
         setUser(data);
       })
       .catch((error) => {
-        // setToastType("error");
-        // setMessage(error.message);
+        setToastType("error");
+        setMessage(error.message);
       });
   }, [setUser, token]);
 
