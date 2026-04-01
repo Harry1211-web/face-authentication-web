@@ -24,6 +24,7 @@ export default function MainPage() {
       .then((data) => {
         setProfile(data);
         setUser(data);
+        console.log(data)
       })
       .catch((error) => {
         setToastType("error");
@@ -34,8 +35,8 @@ export default function MainPage() {
   const changePassword = async (e) => {
     e.preventDefault();
     if (!validateStrongPassword(newPassword)) {
-      // setToastType("error");
-      // setMessage(PASSWORD_HINT);
+      setToastType("error");
+      setMessage(PASSWORD_HINT);
       return;
     }
 
