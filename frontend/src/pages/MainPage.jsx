@@ -23,7 +23,6 @@ export default function MainPage() {
     })
       .then((data) => {
         setProfile(data);
-        console.log(data); 
       })
       .catch((error) => {
         setToastType("error");
