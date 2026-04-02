@@ -223,7 +223,7 @@ export default function RegisterPage() {
         <small>{PASSWORD_HINT}</small>
 
         <div className="video-wrap">
-          <video ref={videoRef} autoPlay muted width="320" height="240" />
+          <video ref={videoRef} autoPlay muted width="320" height="240" playsInline/>
           <div className="face-guide" />
         </div>
         <div className="row">

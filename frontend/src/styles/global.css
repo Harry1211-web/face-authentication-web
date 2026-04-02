@@ -73,12 +73,23 @@ button:disabled {
   cursor: not-allowed;
 }
 
+.video-wrap {
+  position: relative;
+  width: 320px;
+  height: 240px; /* Cố định chiều cao */
+  max-width: 100%;
+  align-self: center;
+  border-radius: 10px;
+  overflow: hidden; /* Cực kỳ quan trọng để cắt phần tràn */
+  background: #000;  /* Nền đen để tránh lộ khoảng trống khi chưa load cam */
+}
+
 video {
-  background: #111;
-  border-radius: 8px;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  display: block;    /* Loại bỏ khoảng trống inline */
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover; /* Ép video lấp đầy và cắt phần thừa */
+  transform: scaleX(-1); /* Lật gương để người dùng dễ căn chỉnh (giống selfie) */
 }
 
 .video-wrap {
@@ -210,7 +221,9 @@ video {
 
   .video-wrap {
     width: 100%;
-    height: min(60vw, 300px);
+    aspect-ratio: 4/3;
+    height: auto;
+
   }
 
   .face-guide {
