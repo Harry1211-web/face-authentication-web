@@ -107,6 +107,22 @@ export async function runLivenessCheck(videoEl, detectFn, onStatus) {
       id: "turn-left",
       label: "Buoc 2/3: Xoay mat sang trai (giu mat trong khung)",
       check: (detection) => {
+        const nose = detection.landmarks.getNose()[3];
+      const jaw = detection.landmarks.getJawOutline();
+      const leftEdge = jaw[0];
+      const rightEdge = jaw[16];
+
+      const distToLeft = distance(nose, leftEdge);
+      const distToRight = distance(nose, rightEdge);
+
+      // Khi xoay Phải, mũi sẽ gần mép Phải hơn
+      return distToRight / distToLeft < 0.6;
+      },
+    },
+    {
+      id: "turn-right",
+      label: "Buoc 3/3: Xoay mat sang phai (giu mat trong khung)",
+      check: (detection) => {
       const nose = detection.landmarks.getNose()[3]; // Đầu mũi
       const jaw = detection.landmarks.getJawOutline();
       const leftEdge = jaw[0];  // Mép hàm trái
@@ -117,22 +133,7 @@ export async function runLivenessCheck(videoEl, detectFn, onStatus) {
 
       // Khi xoay Trái, mũi sẽ gần mép Trái hơn (tỉ lệ < 0.8)
       // Bất kể có lật gương hay không, khoảng cách vật lý này vẫn đúng
-      return distToLeft / distToRight < 0.6;      },
-    },
-    {
-      id: "turn-right",
-      label: "Buoc 3/3: Xoay mat sang phai (giu mat trong khung)",
-      check: (detection) => {
-      const nose = detection.landmarks.getNose()[3];
-      const jaw = detection.landmarks.getJawOutline();
-      const leftEdge = jaw[0];
-      const rightEdge = jaw[16];
-
-      const distToLeft = distance(nose, leftEdge);
-      const distToRight = distance(nose, rightEdge);
-
-      // Khi xoay Phải, mũi sẽ gần mép Phải hơn
-      return distToRight / distToLeft < 0.6;
+      return distToLeft / distToRight < 0.6;   
       },
     },
   ];
