@@ -32,7 +32,7 @@ export default function RegisterPage() {
     setIsChecking(true);
     setLivenessVerified(false);
     setFaceDescriptor(null);
-    setToastType("infor")
+    setToastType("info")
     try {
       await loadFaceModels();
       streamRef.current = await navigator.mediaDevices.getUserMedia({ video: true });
