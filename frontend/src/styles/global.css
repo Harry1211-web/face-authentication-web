@@ -89,6 +89,7 @@ video {
   width: 100% !important;
   height: 100% !important;
   object-fit: cover; /* Ép video lấp đầy và cắt phần thừa */
+  transform: scaleX(-1)!important;
 }
 
 .video-wrap {
