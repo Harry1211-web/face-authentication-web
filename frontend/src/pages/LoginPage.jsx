@@ -19,6 +19,8 @@ export default function LoginPage() {
   const [isChecking, setIsChecking] = useState(false);
   const autoStartedRef = useRef(false);
   const [isSending, setIsSending] = useState(false);
+  const [livenessStatus, setLivenessStatus] = useState({ text: "", progress: 0 });
+  const [isModelsLoading, setIsModelsLoading] = useState(false);
 
   const verifyPassword = async (e) => {
     e.preventDefault();
@@ -41,17 +43,31 @@ export default function LoginPage() {
 
   const startFaceLogin = async () => {
     setIsChecking(true);
+    setLivenessStatus({ text: "", progress: 0 });
     try {
+      setIsModelsLoading(true);
       await loadFaceModels();
+      setIsModelsLoading(false);
+
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       videoRef.current.srcObject = stream;
-      setMessage(
-        "Bat dau liveness challenge: cuoi, xoay trai, xoay phai. Giu mat trong khung."
-      );
+      setLivenessStatus({ text: "Bat dau liveness challenge: cuoi, xoay trai, xoay phai. Giu mat trong khung.", progress: 0 });
+
+      const handleStatus = (status) => {
+        if (typeof status === 'string') {
+          // Parse string to find percentage if object is not passed
+          const match = status.match(/\((\d+)%\)/);
+          const progress = match ? parseInt(match[1]) : 0;
+          setLivenessStatus({ text: status.replace(/\(\d+%\)/, '').trim(), progress });
+        } else {
+          setLivenessStatus(status);
+        }
+      };
+
       const result = await runLivenessCheck(
         videoRef.current,
         detectSingleFaceDescriptor,
-        setMessage
+        handleStatus
       );
       if (!result.passed) {
         setToastType("error");
@@ -96,45 +112,84 @@ export default function LoginPage() {
   }, [step, passwordResult]);
 
   return (
-    <div className="page">
-      <h1>Login 2 Layer (Password -{">"} Face ID + Liveness)</h1>
-
-      {step === "password" && (
-        <form onSubmit={verifyPassword} className="card">
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-          <button type="submit" disabled={isSending}>{isSending ? "Đang xem xét thông tin đăng nhập ..." : "Đăng nhập"}</button>
-        </form>
-      )}
-
-      {step === "face" && (
-        <div className="card">
-          <div className="video-wrap">
-            <video ref={videoRef} autoPlay muted width="320" height="240" />
-            <div className="face-guide" />
-          </div>
-          <button onClick={startFaceLogin} disabled={isChecking}>
-            {isChecking ? "Dang kiem tra..." : "Bat dau Face + Liveness"}
-          </button>
+    <div className="app-container">
+      <div className="page">
+        <div className="auth-header">
+          <h1>Đăng Nhập 2 Lớp</h1>
+          <p>Mật khẩu &rsaquo; Sinh trắc học Face ID</p>
         </div>
-      )}
 
+        {step === "password" && (
+          <form onSubmit={verifyPassword} className="card">
+            <div className="input-group">
+              <label>Tài khoản Email</label>
+              <input
+                type="email"
+                placeholder="Nhập email của bạn..."
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            
+            <div className="input-group">
+              <label>Mật khẩu</label>
+              <input
+                type="password"
+                placeholder="Nhập mật khẩu..."
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+            
+            <button type="submit" disabled={isSending} style={{ marginTop: '0.5rem' }}>
+              {isSending ? <><span className="spinner"></span> Đang xác thực...</> : "Tiếp tục"}
+            </button>
+          </form>
+        )}
+
+        {step === "face" && (
+          <div className="card">
+            <div className="biometrics-section" style={{ borderTop: 'none', paddingTop: 0, marginTop: 0 }}>
+              <div className="video-wrap">
+                <video ref={videoRef} autoPlay muted playsInline />
+                
+                {isChecking && (
+                  <div className={`face-guide active`} />
+                )}
+
+                {isChecking && livenessStatus.text?.includes("Dang tong hop ket qua") && (
+                  <div className={`scanner-overlay active`} />
+                )}
+              </div>
+              
+              {(isChecking && livenessStatus.text) && (
+                <div style={{ width: '100%' }}>
+                  <div className="status-text">{livenessStatus.text}</div>
+                  <div className="progress-container">
+                    <div 
+                      className="progress-bar" 
+                      style={{ width: `${livenessStatus.progress}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <button onClick={startFaceLogin} disabled={isChecking || isModelsLoading}>
+              {isModelsLoading ? (
+                <><span className="spinner"></span> Tải mô hình AI...</>
+              ) : isChecking ? "Đang phân tích..." : "1. Xác thực Sinh trắc"}
+            </button>
+          </div>
+        )}
+
+        <p style={{ textAlign: 'center', marginTop: '1rem' }}>
+          Chưa có tài khoản? <Link to="/register">Đăng ký ngay</Link>
+        </p>
+      </div>
       <Toast message={message} type={toastType} onClose={() => setMessage("")} />
-      <p>
-        Chua co tai khoan? <Link to="/register">Dang ky</Link>
-      </p>
     </div>
   );
 }

@@ -1,17 +1,23 @@
 import * as faceapi from "face-api.js";
 
-let loaded = false;
+let loadingPromise = null;
 
 export async function loadFaceModels() {
-  if (loaded) return;
-  const modelUrl = "/models";
-  await Promise.all([
-    faceapi.nets.tinyFaceDetector.loadFromUri(modelUrl),
-    faceapi.nets.faceLandmark68Net.loadFromUri(modelUrl),
-    faceapi.nets.faceRecognitionNet.loadFromUri(modelUrl),
-    faceapi.nets.faceExpressionNet.loadFromUri(modelUrl),
-  ]);
-  loaded = true;
+  if (loadingPromise) {
+    return loadingPromise;
+  }
+
+  loadingPromise = (async () => {
+    const modelUrl = "/models";
+    await Promise.all([
+      faceapi.nets.tinyFaceDetector.loadFromUri(modelUrl),
+      faceapi.nets.faceLandmark68Net.loadFromUri(modelUrl),
+      faceapi.nets.faceRecognitionNet.loadFromUri(modelUrl),
+      faceapi.nets.faceExpressionNet.loadFromUri(modelUrl),
+    ]);
+  })();
+
+  return loadingPromise;
 }
 
 export async function detectSingleFaceDescriptor(videoEl) {

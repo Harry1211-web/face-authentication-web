@@ -14,11 +14,22 @@ export default function Toast({
 
   if (!message) return null;
 
+  const getIcon = () => {
+    switch(type) {
+      case "success": return "✅";
+      case "error": return "🚨";
+      default: return "ℹ️";
+    }
+  };
+
   return (
     <div className={`toast toast-${type}`}>
-      <span key={message}>{message}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <span style={{ fontSize: '18px' }}>{getIcon()}</span>
+        <span key={message}>{message}</span>
+      </div>
       
-      <button type="button" className="toast-close" onClick={onClose}>
+      <button type="button" className="toast-close" onClick={onClose} aria-label="Close">
         ×
       </button>
     </div>

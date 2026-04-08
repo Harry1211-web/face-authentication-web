@@ -26,6 +26,8 @@ export default function RegisterPage() {
   const [livenessVerified, setLivenessVerified] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [livenessStatus, setLivenessStatus] = useState({ text: "", progress: 0 });
+  const [isModelsLoading, setIsModelsLoading] = useState(false);
 
 
   const startCamera = async () => {
@@ -33,18 +35,32 @@ export default function RegisterPage() {
     setLivenessVerified(false);
     setFaceDescriptor(null);
     setToastType("info")
+    setLivenessStatus({ text: "", progress: 0 });
+    
     try {
+      setIsModelsLoading(true);
       await loadFaceModels();
+      setIsModelsLoading(false);
+      
       streamRef.current = await navigator.mediaDevices.getUserMedia({ video: true });
       videoRef.current.srcObject = streamRef.current;
-      setMessage(
-        "Bat dau liveness challenge: cuoi, xoay trai, xoay phai. Giu mat trong khung."
-      );
+      setLivenessStatus({ text: "Bat dau liveness challenge: cuoi, xoay trai, xoay phai. Giu mat trong khung.", progress: 0 });
+
+      const handleStatus = (status) => {
+        if (typeof status === 'string') {
+          // Parse string to find percentage if object is not passed
+          const match = status.match(/\((\d+)%\)/);
+          const progress = match ? parseInt(match[1]) : 0;
+          setLivenessStatus({ text: status.replace(/\(\d+%\)/, '').trim(), progress });
+        } else {
+          setLivenessStatus(status);
+        }
+      };
 
       const result = await runLivenessCheck(
         videoRef.current,
         detectSingleFaceDescriptor,
-        setMessage
+        handleStatus
       );
       if (!result.passed) {
         setToastType("error");
@@ -179,72 +195,127 @@ export default function RegisterPage() {
       return;
     }
 
-    setIsSending(true);
-
-    await apiRequest("/api/auth/register", {
-      method: "POST",
-      body: JSON.stringify({ ...form, phone: normalizedPhone, faceDescriptor }),
-    });
-    setToastType("success");
-    setMessage("Dang ky thanh cong. Chuyen sang trang login...");
-
-    setIsSending(false);
-    setTimeout(() => navigate("/login"), 800);
+    try {
+      await apiRequest("/api/auth/register", {
+        method: "POST",
+        body: JSON.stringify({ ...form, phone: normalizedPhone, faceDescriptor }),
+      });
+      setToastType("success");
+      setMessage("Dang ky thanh cong. Chuyen sang trang login...");
+      setTimeout(() => navigate("/login"), 800);
+    } catch (error) {
+      setToastType("error");
+      setMessage(error.message || "Lỗi kết nối tới máy chủ.");
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (
-    <div className="page">
-      <h1>Register</h1>
-      <form onSubmit={submit} className="card">
-        <input
-          placeholder="Full name"
-          value={form.fullName}
-          onChange={(e) => setForm({ ...form, fullName: e.target.value })}
-          required
-        />
-        <input
-          type="email"
-          placeholder="Email"
-          value={form.email}
-          onChange={(e) => setForm({ ...form, email: e.target.value })}
-          required
-        />
-        <input
-          placeholder="Phone"
-          value={form.phone}
-          onChange={(e) => setForm({ ...form, phone: e.target.value })}
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          value={form.password}
-          onChange={(e) => setForm({ ...form, password: e.target.value })}
-          required
-        />
-        <small>{PASSWORD_HINT}</small>
+    <div className="app-container">
+      <div className="page">
+        <div className="auth-header">
+          <h1>Tạo Tài Khoản</h1>
+          <p>Scan khuôn mặt để bật chế độ bảo mật sinh trắc học</p>
+        </div>
+        
+        <form onSubmit={submit} className="card">
+          <div className="input-group">
+            <label>Họ và tên</label>
+            <input
+              placeholder="Nhập họ và tên..."
+              value={form.fullName}
+              onChange={(e) => setForm({ ...form, fullName: e.target.value })}
+              required
+            />
+          </div>
+          
+          <div className="input-group">
+            <label>Email</label>
+            <input
+              type="email"
+              placeholder="Nhập địa chỉ email..."
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              required
+            />
+          </div>
+          
+          <div className="row">
+            <div className="input-group">
+              <label>Số điện thoại</label>
+              <input
+                placeholder="Nhập SĐT..."
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              />
+            </div>
+            
+            <div className="input-group">
+              <label>Mật khẩu</label>
+              <input
+                type="password"
+                placeholder="Nhập mật khẩu..."
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                required
+              />
+            </div>
+          </div>
+          <small>{PASSWORD_HINT}</small>
 
-        <div className="video-wrap">
-          <video ref={videoRef} autoPlay muted width="320" height="240" playsInline/>
-          <div className="face-guide" />
-        </div>
-        <div className="row">
-          <button type="button" onClick={startCamera}>
-            {isChecking ? "Dang kiem tra..." : "Bat camera + Liveness"}
+          <div className="biometrics-section">
+            <div className="video-wrap">
+              <video ref={videoRef} autoPlay muted playsInline/>
+              
+              {(isChecking || isCapturing) && (
+                <div className={`face-guide ${livenessVerified ? 'active' : ''}`} />
+              )}
+
+              {isCapturing && (
+                <div className={`scanner-overlay active`} />
+              )}
+            </div>
+            
+            {(isChecking && livenessStatus.text) && (
+              <div style={{ width: '100%' }}>
+                <div className="status-text">{livenessStatus.text}</div>
+                <div className="progress-container">
+                  <div 
+                    className="progress-bar" 
+                    style={{ width: `${livenessStatus.progress}%` }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="row">
+            <button type="button" className="secondary" onClick={startCamera} disabled={isChecking || isModelsLoading || isCapturing}>
+              {isModelsLoading ? (
+                <><span className="spinner"></span> Tải mô hình AI...</>
+              ) : isChecking ? "Đang phân tích..." : "1. Xác thực Sinh trắc"}
+            </button>
+            <button 
+              type="button" 
+              className="secondary"
+              onClick={startAutoCapture} 
+              disabled={!livenessVerified || isCapturing}
+            >
+              {isCapturing ? "Đang lấy chuỗi nhị phân..." : "2. Lưu trữ Face ID"}
+            </button>
+          </div>
+          
+          <button type="submit" disabled={isSending}>
+            {isSending ? <><span className="spinner"></span> Đang kết nối...</> : "Đăng ký Hệ thống"}
           </button>
-          <button 
-            type="button" 
-            onClick={startAutoCapture} 
-            disabled={!livenessVerified || isCapturing}
-          >
-            {isCapturing ? "Đang quét khuôn mặt..." : "Bắt đầu quét Face ID"}
-          </button>
-        </div>
-        <button type="submit" disabled={isSending}>{isSending ? "Đang xử lý thông tin đăng ký..." : "Đăng ký"}</button>
-      </form>
+        </form>
+        
+        <p style={{ textAlign: 'center', marginTop: '1rem' }}>
+          Đã có tài khoản? <Link to="/login">Đăng nhập ngay</Link>
+        </p>
+      </div>
       <Toast message={message} type={toastType} onClose={() => setMessage("")} />
-      <p>
-        Da co tai khoan? <Link to="/login">Dang nhap</Link>
-      </p>
     </div>
   );
 }
