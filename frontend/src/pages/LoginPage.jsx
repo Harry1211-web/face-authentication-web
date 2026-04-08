@@ -35,9 +35,11 @@ export default function LoginPage() {
       setStep("face");
       setToastType("info");
       setMessage("Mat khau dung. Dang mo camera va bat dau liveness...");
+      setIsSending(false);
     } catch (error) {
       setToastType("error");
       setMessage(error.message || "Xac thuc mat khau that bai");
+      setIsSending(false);
     }
   };
 
