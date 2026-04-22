@@ -1,0 +1,15 @@
+1. Mở trang web -> F12 -> Sources -> Overrides -> Chọn thư mục -> Allow.
+
+2. Chuột phải file .js trong Page -> "Override content" (hoặc "Save for overrides").
+
+3. Chèn mã:
+
+JavaScript
+p("success"),
+d("Da xac thuc nguoi thật..."),
+alert("DỪNG LẠI! Hãy đưa ảnh nạn nhân lên trước Camera rồi nhấn OK"),
+// Hoặc dùng đoạn await 5000 của bạn
+
+4. Ctrl + S và F5 lại trang.
+
+5. Thực hiện quét mặt thật -> Đợi thông báo hiện ra -> Tráo ảnh -> Thành công.

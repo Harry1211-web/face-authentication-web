@@ -1,0 +1,11 @@
+kiểm tra và sửa lỗi logic ở backend:
+- buộc qua được lớp face-auth mới tiến hành login
+- điểu chỉnh lại luồng hoạt động của face, thay vì gửi theo từng pic cap thì gửi 1 stream video
+- ràng buộc số lần thử đăng nhập
+- thay vì tách riêng liveness và face-auth thì trong quá trình liveness lưu 1 frame bất kì để làm auth
+- active liveness thêm tính năng random
+điểu chỉnh frontend:
+- đồng bộ hóa các chức năng cũng như error vừa chỉnh ở backend
+- thêm show/hide ở password
+- real-time ở kiểm tra mật khẩu mạnh
+- thêm nút tắt camera
