@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { apiRequest } from "../services/api";
 import { useAuth } from "../context/AuthContext";
-import { detectSingleFaceDescriptor, loadFaceModels } from "../lib/face";
+import { loadFaceModels } from "../lib/face";
 import { runLivenessCheck } from "../utils/liveness";
 import Toast from "../components/Toast";
 
@@ -10,54 +10,79 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
   const videoRef = useRef(null);
-  const [step, setStep] = useState("password");
+  const streamRef = useRef(null);
+  
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [passwordResult, setPasswordResult] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
+  
   const [message, setMessage] = useState("");
   const [toastType, setToastType] = useState("info");
+  
   const [isChecking, setIsChecking] = useState(false);
-  const autoStartedRef = useRef(false);
   const [isSending, setIsSending] = useState(false);
   const [livenessStatus, setLivenessStatus] = useState({ text: "", progress: 0 });
   const [isModelsLoading, setIsModelsLoading] = useState(false);
 
-  const verifyPassword = async (e) => {
-    e.preventDefault();
-    try {
-      setIsSending(true)
-      const result = await apiRequest("/api/auth/login/password", {
-        method: "POST",
-        body: JSON.stringify({ email, password }),
-      });
-      setPasswordResult(result);
-      autoStartedRef.current = false;
-      setStep("face");
-      setToastType("info");
-      setMessage("Mat khau dung. Dang mo camera va bat dau liveness...");
-      setIsSending(false);
-    } catch (error) {
-      setToastType("error");
-      setMessage(error.message || "Xac thuc mat khau that bai");
-      setIsSending(false);
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
     }
   };
 
-  const startFaceLogin = async () => {
+  useEffect(() => {
+    return () => stopCamera();
+  }, []);
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    
+    if (!email || !password) {
+      setToastType("error");
+      setMessage("Vui lòng nhập đầy đủ Email và Mật khẩu trước.");
+      return;
+    }
+
+    try {
+      const statusRes = await apiRequest("/api/auth/check-status", {
+        method: "POST",
+        body: JSON.stringify({ email })
+      });
+      if (statusRes.locked) {
+        setToastType("error");
+        setMessage(`Tài khoản đã bị khóa. Vui lòng thử lại sau ${statusRes.waitMinutes} phút.`);
+        return;
+      }
+    } catch (err) {
+      setToastType("error");
+      setMessage(err.message || "Không thể kiểm tra trạng thái tài khoản");
+      return;
+    }
+
     setIsChecking(true);
     setLivenessStatus({ text: "", progress: 0 });
+    
     try {
       setIsModelsLoading(true);
       await loadFaceModels();
       setIsModelsLoading(false);
 
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      videoRef.current.srcObject = stream;
-      setLivenessStatus({ text: "Bat dau liveness challenge: cuoi, xoay trai, xoay phai. Giu mat trong khung.", progress: 0 });
+      streamRef.current = await navigator.mediaDevices.getUserMedia({ video: true });
+      videoRef.current.srcObject = streamRef.current;
+      setLivenessStatus({ text: "Đang khởi tạo phiên bảo mật...", progress: 0 });
+
+      // Fetch challenge token
+      const challengeRes = await apiRequest("/api/auth/challenge");
+      const sessionToken = challengeRes.sessionToken;
+
+      setLivenessStatus({ text: "Chuẩn bị kiểm tra Liveness...", progress: 0 });
 
       const handleStatus = (status) => {
         if (typeof status === 'string') {
-          // Parse string to find percentage if object is not passed
           const match = status.match(/\((\d+)%\)/);
           const progress = match ? parseInt(match[1]) : 0;
           setLivenessStatus({ text: status.replace(/\(\d+%\)/, '').trim(), progress });
@@ -68,92 +93,99 @@ export default function LoginPage() {
 
       const result = await runLivenessCheck(
         videoRef.current,
-        detectSingleFaceDescriptor,
         handleStatus
       );
+
       if (!result.passed) {
         setToastType("error");
-        setMessage(
-          `Liveness chua dat. ${result.reason}. Vui long thu lai va giu mat trong khung.`
-        );
-        stream.getTracks().forEach((t) => t.stop());
+        setMessage(`Liveness chưa đạt. ${result.reason}. Vui lòng thử lại.`);
+        stopCamera();
+        setIsChecking(false);
         return;
       }
 
-      setToastType("success");
-      setMessage("Da xac thuc nguoi that. Dang tien hanh dang nhap khuon mat...");
+      setToastType("info");
+      setMessage("Đã thu thập dữ liệu Liveness thành công. Đang xử lý đăng nhập...");
+      setIsSending(true);
 
-      const loginResult = await apiRequest("/api/auth/login/face", {
+      const loginResult = await apiRequest("/api/auth/login", {
         method: "POST",
         body: JSON.stringify({
-          userId: passwordResult.userId,
-          faceDescriptor: Array.from(result.finalDetection.descriptor),
-          activeLivenessScore: result.activeScore,
-          passiveLivenessScore: result.passiveScore,
+          email,
+          password,
+          sessionToken,
+          proofs: result.proofs
         }),
       });
 
-      stream.getTracks().forEach((t) => t.stop());
+      stopCamera();
       login(loginResult.token);
       setToastType("success");
       setMessage("Đăng nhập thành công.");
       navigate("/main");
     } catch (error) {
+      stopCamera();
       setToastType("error");
-      setMessage(error.message || "Face login failed");
+      setMessage(error.message || "Đăng nhập thất bại");
     } finally {
       setIsChecking(false);
+      setIsSending(false);
     }
   };
-
-  useEffect(() => {
-    if (step === "face" && passwordResult && !autoStartedRef.current) {
-      autoStartedRef.current = true;
-      startFaceLogin();
-    }
-  }, [step, passwordResult]);
 
   return (
     <div className="app-container">
       <div className="page">
         <div className="auth-header">
           <h1>Đăng Nhập 2 Lớp</h1>
-          <p>Mật khẩu &rsaquo; Sinh trắc học Face ID</p>
+          <p>Mật khẩu &amp; Sinh trắc học Face ID</p>
         </div>
 
-        {step === "password" && (
-          <form onSubmit={verifyPassword} className="card">
-            <div className="input-group">
-              <label>Tài khoản Email</label>
+        <form onSubmit={handleLogin} className="card">
+          <div className="input-group">
+            <label>Tài khoản Email</label>
+            <input
+              type="email"
+              placeholder="Nhập email của bạn..."
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              disabled={isChecking || isSending}
+            />
+          </div>
+          
+          <div className="input-group">
+            <label>Mật khẩu</label>
+            <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
               <input
-                type="email"
-                placeholder="Nhập email của bạn..."
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            
-            <div className="input-group">
-              <label>Mật khẩu</label>
-              <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 placeholder="Nhập mật khẩu..."
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                disabled={isChecking || isSending}
+                style={{ width: '100%', paddingRight: '40px' }}
               />
+              <button 
+                type="button" 
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  position: 'absolute',
+                  right: '5px',
+                  background: 'none',
+                  border: 'none',
+                  color: '#666',
+                  cursor: 'pointer',
+                  padding: '5px'
+                }}
+              >
+                {showPassword ? "👁️" : "👁️‍🗨️"}
+              </button>
             </div>
-            
-            <button type="submit" disabled={isSending} style={{ marginTop: '0.5rem' }}>
-              {isSending ? <><span className="spinner"></span> Đang xác thực...</> : "Tiếp tục"}
-            </button>
-          </form>
-        )}
+          </div>
 
-        {step === "face" && (
-          <div className="card">
-            <div className="biometrics-section" style={{ borderTop: 'none', paddingTop: 0, marginTop: 0 }}>
+          {(isChecking || isSending) && (
+            <div className="biometrics-section" style={{ borderTop: 'none', paddingTop: 0, marginTop: '1rem' }}>
               <div className="video-wrap">
                 <video ref={videoRef} autoPlay muted playsInline />
                 
@@ -178,14 +210,36 @@ export default function LoginPage() {
                 </div>
               )}
             </div>
-
-            <button onClick={startFaceLogin} disabled={isChecking || isModelsLoading}>
+          )}
+          
+          <div className="row" style={{ marginTop: '1rem' }}>
+            <button type="submit" disabled={isChecking || isSending || isModelsLoading} style={{ flex: 1 }}>
               {isModelsLoading ? (
-                <><span className="spinner"></span> Tải mô hình AI...</>
-              ) : isChecking ? "Đang phân tích..." : "1. Xác thực Sinh trắc"}
+                <><span className="spinner"></span> Đang tải mô hình...</>
+              ) : isSending ? (
+                <><span className="spinner"></span> Đang xác thực...</>
+              ) : isChecking ? (
+                "Đang quét khuôn mặt..."
+              ) : (
+                "Bật Camera để Đăng nhập"
+              )}
             </button>
+            {isChecking && (
+              <button 
+                type="button" 
+                className="secondary" 
+                onClick={() => {
+                  stopCamera();
+                  setIsChecking(false);
+                  setLivenessStatus({ text: "", progress: 0 });
+                }} 
+                style={{ marginLeft: '10px' }}
+              >
+                Tắt Camera
+              </button>
+            )}
           </div>
-        )}
+        </form>
 
         <p style={{ textAlign: 'center', marginTop: '1rem' }}>
           Chưa có tài khoản? <Link to="/register">Đăng ký ngay</Link>

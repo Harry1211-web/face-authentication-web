@@ -17,3 +17,23 @@ export function verifyJwt(token) {
   }
   return jwt.verify(token, secret);
 }
+
+export function signChallengeToken() {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error("JWT_SECRET is missing");
+  }
+  return jwt.sign({ type: "challenge", nonce: Math.random().toString(36).substring(2) }, secret, { expiresIn: "60s" });
+}
+
+export function verifyChallengeToken(token) {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error("JWT_SECRET is missing");
+  }
+  const decoded = jwt.verify(token, secret);
+  if (decoded.type !== "challenge") {
+    throw new Error("Invalid token type");
+  }
+  return decoded;
+}

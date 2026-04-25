@@ -1,234 +1,109 @@
+import { detectSingleFaceDescriptor } from "../lib/face";
+
+export const ALL_CHALLENGES = [
+  { id: "smile", label: "Vui lòng cười rõ ràng" },
+  { id: "turn-left", label: "Xoay mặt sang trái" },
+  { id: "turn-right", label: "Xoay mặt sang phải" },
+  { id: "look-up", label: "Ngước mặt lên trên" },
+  { id: "look-down", label: "Cúi mặt xuống dưới" }
+];
+
+function captureFrameBase64(videoEl) {
+  const canvas = document.createElement("canvas");
+  canvas.width = videoEl.videoWidth || 640;
+  canvas.height = videoEl.videoHeight || 480;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL("image/jpeg", 0.7);
+}
+
 function getEyeAspectRatio(eyePoints) {
-  const a = distance(eyePoints[1], eyePoints[5]);
-  const b = distance(eyePoints[2], eyePoints[4]);
-  const c = distance(eyePoints[0], eyePoints[3]);
+  const a = Math.hypot(eyePoints[1].x - eyePoints[5].x, eyePoints[1].y - eyePoints[5].y);
+  const b = Math.hypot(eyePoints[2].x - eyePoints[4].x, eyePoints[2].y - eyePoints[4].y);
+  const c = Math.hypot(eyePoints[0].x - eyePoints[3].x, eyePoints[0].y - eyePoints[3].y);
   return (a + b) / (2 * c);
 }
 
-function distance(p1, p2) {
-  const dx = p1.x - p2.x;
-  const dy = p1.y - p2.y;
-  return Math.sqrt(dx * dx + dy * dy);
-}
+export async function runLivenessCheck(videoEl, onStatus) {
+  let shuffled = [...ALL_CHALLENGES].sort(() => 0.5 - Math.random());
+  const selectedChallenges = shuffled.slice(0, 3);
+  
+  const proofs = [];
 
-function clamp01(n) {
-  return Math.max(0, Math.min(1, n));
-}
-
-function estimateBrightness(videoEl) {
-  const w = 64;
-  const h = 48;
-  const canvas = document.createElement("canvas");
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext("2d", { willReadFrequently: true });
-  if (!ctx) return 0.5;
-
-  ctx.drawImage(videoEl, 0, 0, w, h);
-  const { data } = ctx.getImageData(0, 0, w, h);
-  let sum = 0;
-  for (let i = 0; i < data.length; i += 4) {
-    // relative luminance (approx)
-    sum += 0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2];
-  }
-  const avg = sum / (w * h);
-  return avg / 255;
-}
-
-export function estimatePassiveLiveness(detection, prevState) {
-  const landmarks = detection.landmarks;
-  const leftEye = landmarks.getLeftEye();
-  const rightEye = landmarks.getRightEye();
-  const ear = (getEyeAspectRatio(leftEye) + getEyeAspectRatio(rightEye)) / 2;
-
-  let blinkDetected = false;
-  if (prevState.lastEar && prevState.lastEar > 0.26 && ear < 0.2) {
-    blinkDetected = true;
-  }
-  prevState.lastEar = ear;
-
-  const jaw = landmarks.getJawOutline();
-  const faceWidth = distance(jaw[0], jaw[16]);
-  const nose = landmarks.getNose();
-  const faceHeight = distance(nose[0], nose[6]);
-  const textureProxy = Math.min(faceHeight / faceWidth, 1);
-
-  const microExpression = Math.max(
-    detection.expressions.happy || 0,
-    detection.expressions.surprised || 0,
-    detection.expressions.neutral || 0
-  );
-
-  const score =
-    (blinkDetected ? 0.3 : 0.2) + textureProxy * 0.3 + microExpression * 0.3;
-  return Math.min(score, 1);
-}
-
-export function evaluateActiveSteps(detections) {
-  if (!detections.length) return { score: 0, passed: [] };
-
-  const passed = [];
-
-  const happyPassed = detections.some((d) => (d.expressions.happy || 0) > 0.75);
-  if (happyPassed) passed.push("smile");
-
-  const yawValues = detections.map((d) => {
-    const nose = d.landmarks.getNose();
-    const jaw = d.landmarks.getJawOutline();
-    const faceCenter = (jaw[0].x + jaw[16].x) / 2;
-    return nose[3].x - faceCenter;
-  });
-
-  if (yawValues.some((v) => v > 10)) passed.push("turn-right");
-  if (yawValues.some((v) => v < -10)) passed.push("turn-left");
-
-  const score = passed.length / 3;
-  return { score, passed };
-}
-
-export async function runLivenessCheck(videoEl, detectFn, onStatus) {
-  const detections = [];
-  const passiveState = {};
-  const passiveScores = [];
-  const FRAME_DELAY_MS = 420;
-  const STEP_MAX_FRAMES = 22;
-
-  const ACTIVE_THRESHOLD = 1.0;
-  const PASSIVE_THRESHOLD = 0.45;
-  const MIN_BRIGHTNESS = 0.22;
-
-  const activeSteps = [
-    {
-      id: "smile",
-      label: "Buoc 1/3: Vui long cuoi ro rang",
-      check: (detection) => (detection.expressions.happy || 0) > 0.75,
-    },
-    {
-      id: "turn-left",
-      label: "Buoc 2/3: Xoay mat sang trai (giu mat trong khung)",
-      check: (detection) => {
-        const nose = detection.landmarks.getNose()[3];
-      const jaw = detection.landmarks.getJawOutline();
-      const leftEdge = jaw[0];
-      const rightEdge = jaw[16];
-
-      const distToLeft = distance(nose, leftEdge);
-      const distToRight = distance(nose, rightEdge);
-
-      // Khi xoay Phải, mũi sẽ gần mép Phải hơn
-      return distToRight / distToLeft < 0.6;
-      },
-    },
-    {
-      id: "turn-right",
-      label: "Buoc 3/3: Xoay mat sang phai (giu mat trong khung)",
-      check: (detection) => {
-      const nose = detection.landmarks.getNose()[3]; // Đầu mũi
-      const jaw = detection.landmarks.getJawOutline();
-      const leftEdge = jaw[0];  // Mép hàm trái
-      const rightEdge = jaw[16]; // Mép hàm phải
-
-      const distToLeft = distance(nose, leftEdge);
-      const distToRight = distance(nose, rightEdge);
-
-      // Khi xoay Trái, mũi sẽ gần mép Trái hơn (tỉ lệ < 0.8)
-      // Bất kể có lật gương hay không, khoảng cách vật lý này vẫn đúng
-      return distToLeft / distToRight < 0.6;   
-      },
-    },
-  ];
-
-  const activeState = {
-    currentStepIndex: 0,
-    passed: [],
-  };
-
-  // Wait a bit for camera to warm up
-  await new Promise((resolve) => setTimeout(resolve, 350));
-
-  let frameInStep = 0;
-  const totalStepCount = activeSteps.length;
-
-  while (activeState.currentStepIndex < totalStepCount) {
-    await new Promise((resolve) => setTimeout(resolve, FRAME_DELAY_MS));
-    const currentStep = activeSteps[activeState.currentStepIndex];
-
-    frameInStep += 1;
-    const stepProgress = clamp01(frameInStep / STEP_MAX_FRAMES);
-    const overallProgress =
-      ((activeState.passed.length + stepProgress) / totalStepCount) * 100;
-
-    const brightness = estimateBrightness(videoEl);
-    if (brightness < MIN_BRIGHTNESS) {
-      onStatus?.(
-        `Anh sang thap (≈${Math.round(
-          brightness * 100
-        )}%). Hay ra noi sang hon. (${Math.round(overallProgress)}%)`
-      );
-      continue;
+  // 1. Capture neutral frame first
+  onStatus?.("Vui lòng giữ khuôn mặt ở giữa khung hình...");
+  let neutralCaptured = false;
+  let neutralAttempts = 0;
+  while (!neutralCaptured && neutralAttempts < 100) {
+    neutralAttempts++;
+    await new Promise(resolve => setTimeout(resolve, 100));
+    const detection = await detectSingleFaceDescriptor(videoEl);
+    if (detection && detection.detection.score > 0.8) {
+      proofs.push({ challenge: "neutral", image: captureFrameBase64(videoEl) });
+      neutralCaptured = true;
     }
+  }
 
-    onStatus?.(`${currentStep.label} (${Math.round(overallProgress)}%)`);
+  if (!neutralCaptured) {
+    return { passed: false, reason: "Không tìm thấy khuôn mặt rõ nét ban đầu" };
+  }
 
-    let detection;
-    try {
-      detection = await detectFn(videoEl);
-    } catch (error) {
-      onStatus?.(
-        `Khong thay ro khuon mat. Hay dua mat vao giua khung. (${Math.round(
-          overallProgress
-        )}%)`
-      );
-      continue;
-    }
-    detections.push(detection);
-    passiveScores.push(estimatePassiveLiveness(detection, passiveState));
+  // 2. Run random challenges
+  for (let i = 0; i < selectedChallenges.length; i++) {
+    const challenge = selectedChallenges[i];
+    onStatus?.(`BƯỚC ${i + 1}/${selectedChallenges.length}: ${challenge.label}`);
 
-    if (currentStep.check(detection, activeState)) {
-      activeState.passed.push(currentStep.id);
-      activeState.currentStepIndex += 1;
-      frameInStep = 0;
+    let passed = false;
+    let attempts = 0;
+    while (!passed && attempts < 150) { // Timeout sau ~15 giây
+      attempts++;
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      const detection = await detectSingleFaceDescriptor(videoEl);
+      if (!detection) continue;
 
-      if (activeState.currentStepIndex >= activeSteps.length) {
-        onStatus?.("Active liveness hop le. Dang tong hop ket qua...");
-        break;
+      const expressions = detection.expressions;
+      const landmarks = detection.landmarks;
+
+      if (challenge.id === "smile") {
+        if (expressions.happy > 0.5) passed = true;
+      } 
+      else if (challenge.id === "turn-left" || challenge.id === "turn-right") {
+        const nose = landmarks.getNose()[3];
+        const jaw = landmarks.getJawOutline();
+        const distToLeft = Math.hypot(nose.x - jaw[0].x, nose.y - jaw[0].y);
+        const distToRight = Math.hypot(nose.x - jaw[16].x, nose.y - jaw[16].y);
+        
+        if (challenge.id === "turn-left" && (distToRight / distToLeft) < 0.6) passed = true;
+        if (challenge.id === "turn-right" && (distToLeft / distToRight) < 0.6) passed = true;
       }
-
-      const nextStep = activeSteps[activeState.currentStepIndex];
-      onStatus?.(`Hop le. Tiep tuc: ${nextStep.label}`);
-      continue;
+      else if (challenge.id === "look-up" || challenge.id === "look-down") {
+        const noseTip = landmarks.getNose()[3];
+        const leftEyeCenter = landmarks.getLeftEye().reduce((acc, curr) => ({ x: acc.x + curr.x / 6, y: acc.y + curr.y / 6 }), { x: 0, y: 0 });
+        const mouthTop = landmarks.getMouth()[3];
+        const eyeToNose = noseTip.y - leftEyeCenter.y;
+        const noseToMouth = mouthTop.y - noseTip.y;
+        
+        if (challenge.id === "look-up" && (noseToMouth / (eyeToNose || 1)) > 1.2) passed = true;
+        if (challenge.id === "look-down" && (eyeToNose / (noseToMouth || 1)) > 1.5) passed = true;
+      }
     }
-
-    if (frameInStep >= STEP_MAX_FRAMES) {
-      frameInStep = 0;
-      onStatus?.(`Chua hop le. Thu lai: ${currentStep.label}`);
+    
+    if (!passed) {
+      return { passed: false, reason: `Thời gian chờ quá lâu ở bước: ${challenge.label}` };
     }
+    
+    // Capture the frame when challenge is passed
+    proofs.push({ challenge: challenge.id, image: captureFrameBase64(videoEl) });
+
+    onStatus?.(`Hoàn thành: ${challenge.label}`);
+    await new Promise(resolve => setTimeout(resolve, 800));
   }
 
-  const active = {
-    score: activeState.passed.length / activeSteps.length,
-    passed: activeState.passed,
-  };
-  const passiveAvg = passiveScores.length
-    ? passiveScores.reduce((sum, value) => sum + value, 0) / passiveScores.length
-    : 0;
-  const passed = active.score >= ACTIVE_THRESHOLD && passiveAvg >= PASSIVE_THRESHOLD;
-  const reason = !passed
-    ? `Khong dat: active=${active.score.toFixed(2)}/${ACTIVE_THRESHOLD.toFixed(
-        2
-      )}, passive=${passiveAvg.toFixed(2)}/${PASSIVE_THRESHOLD.toFixed(2)}`
-    : "";
-
+  onStatus?.("Xác thực Liveness thành công. Đang xử lý đăng nhập...");
+  
   return {
-    passed,
-    activeScore: active.score,
-    passiveScore: passiveAvg,
-    finalDetection: detections[detections.length - 1],
-    activePassedSteps: active.passed,
-    thresholds: {
-      active: ACTIVE_THRESHOLD,
-      passive: PASSIVE_THRESHOLD,
-    },
-    reason,
+    passed: true,
+    proofs
   };
 }

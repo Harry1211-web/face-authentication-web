@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { apiRequest } from "../services/api";
 import Toast from "../components/Toast";
+import PasswordStrength from "../components/PasswordStrength";
 import {
   PASSWORD_HINT,
   validateStrongPassword,
@@ -14,6 +15,9 @@ export default function MainPage() {
   const [profile, setProfile] = useState(null);
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const [message, setMessage] = useState("");
   const [toastType, setToastType] = useState("info");
 
@@ -38,6 +42,7 @@ export default function MainPage() {
       return;
     }
 
+    setIsSending(true);
     try {
       await apiRequest("/api/users/me/password", {
         method: "PATCH",
@@ -51,6 +56,8 @@ export default function MainPage() {
     } catch (error) {
       setToastType("error");
       setMessage(error.message || "Doi mat khau that bai");
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -107,28 +114,67 @@ export default function MainPage() {
             
             <div className="input-group">
               <label>Mật khẩu cũ</label>
-              <input
-                type="password"
-                placeholder="Nhập mật khẩu hiện tại..."
-                value={oldPassword}
-                onChange={(e) => setOldPassword(e.target.value)}
-                required
-              />
+              <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
+                <input
+                  type={showOldPassword ? "text" : "password"}
+                  placeholder="Nhập mật khẩu hiện tại..."
+                  value={oldPassword}
+                  onChange={(e) => setOldPassword(e.target.value)}
+                  required
+                  style={{ width: '100%', paddingRight: '40px' }}
+                />
+                <button 
+                  type="button" 
+                  onClick={() => setShowOldPassword(!showOldPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '5px',
+                    background: 'none',
+                    border: 'none',
+                    color: '#666',
+                    cursor: 'pointer',
+                    padding: '5px'
+                  }}
+                >
+                  {showOldPassword ? "👁️" : "👁️‍🗨️"}
+                </button>
+              </div>
             </div>
             
             <div className="input-group">
               <label>Mật khẩu mới</label>
-              <input
-                type="password"
-                placeholder="Đổi mật khẩu mới..."
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                required
-              />
+              <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
+                <input
+                  type={showNewPassword ? "text" : "password"}
+                  placeholder="Đổi mật khẩu mới..."
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  style={{ width: '100%', paddingRight: '40px' }}
+                />
+                <button 
+                  type="button" 
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '5px',
+                    background: 'none',
+                    border: 'none',
+                    color: '#666',
+                    cursor: 'pointer',
+                    padding: '5px'
+                  }}
+                >
+                  {showNewPassword ? "👁️" : "👁️‍🗨️"}
+                </button>
+              </div>
             </div>
-            <small style={{ marginTop: '-0.5rem' }}>{PASSWORD_HINT}</small>
             
-            <button type="submit" style={{ marginTop: 'auto' }}>Cập Nhật Mã Khóa</button>
+            <PasswordStrength password={newPassword} />
+            
+            <button type="submit" disabled={isSending} style={{ marginTop: 'auto' }}>
+              {isSending ? <><span className="spinner"></span> Đang xử lý...</> : "Cập Nhật Mã Khóa"}
+            </button>
           </form>
         </div>
 

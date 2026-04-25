@@ -27,8 +27,18 @@ export async function initDb() {
       phone TEXT,
       password_hash TEXT NOT NULL,
       face_descriptor TEXT NOT NULL,
+      failed_attempts INT DEFAULT 0,
+      lock_until TIMESTAMPTZ,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+  `);
+
+  await pool.query(`
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS failed_attempts INT DEFAULT 0;
+  `);
+
+  await pool.query(`
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS lock_until TIMESTAMPTZ;
   `);
 
   await pool.query(`

@@ -27,8 +27,5 @@ export async function detectSingleFaceDescriptor(videoEl) {
     .withFaceDescriptor()
     .withFaceExpressions();
 
-  if (!detection) {
-    throw new Error("No face detected");
-  }
   return detection;
 }
